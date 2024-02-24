@@ -7,6 +7,7 @@ const bodyParser = require('body-parser')
 const cors = require('cors')
 const swaggerUI = require('swagger-ui-express')
 const swaggerJsdoc = require('swagger-jsdoc')
+const { logger, loggerMiddleware } = require('./logger')
 
 
 const db = mysql.createConnection({
@@ -20,11 +21,13 @@ const db = mysql.createConnection({
 app.use(express.json())
 app.use(cors())
 app.use(bodyParser.json())
+app.use(loggerMiddleware)
+
 
 app.get('/users', (req,res) => {
     db.query('SELECT * FROM users', (err,result) => {
         if(err) {
-            console(err)
+            logger.error(err)
         } else {
             res.send(result)
         }
@@ -47,6 +50,16 @@ app.post('/create', (req,res) => {
         }
     )
 })
+
+
+const errorHandlerMiddleware = (err, req, res, next) => {
+    logger.error(err);
+    res.status(500).send({message: error.message} ,'Internal Server Error');
+  };
+
+app.use(errorHandlerMiddleware);
+
+
 // Swagger definition
 const  swaggerOption =  {
     definition: {
@@ -66,6 +79,9 @@ const  swaggerOption =  {
     },
     apis: ['index.js'],
 };
+
+
+
 const swaggerSpec = swaggerJsdoc(swaggerOption);
 app.use('/api-docs', swaggerUI.serve,swaggerUI.setup(swaggerSpec))
 
